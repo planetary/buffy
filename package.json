@@ -9,6 +9,12 @@
   "author": "Joshua Gross",
   "license": "BSD-2-Clause",
   "dependencies": {
-    "botkit": "0.0.5"
+    "babel-eslint": "^5.0.0-beta6",
+    "bluebird": "^3.1.1",
+    "botkit": "0.0.5",
+    "eslint": "^1.10.3",
+    "moment": "^2.11.1",
+    "node-schedule": "^0.6.0",
+    "node-trello": "^1.1.2"
   }
 }
