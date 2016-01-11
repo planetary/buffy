@@ -7,6 +7,9 @@ const path = require('path');
 const schedule = require('node-schedule');
 const Trello = require('node-trello');
 
+require('dotenv').load();
+const debug = process.env.debug === 'true';
+
 if(!process.env.token)
     throw new Error('Specify token in environment');
 
@@ -14,7 +17,7 @@ const t = new Trello(process.env.trello_key, process.env.trello_secret);
 bluebird.promisifyAll(t);
 
 const controller = Botkit.slackbot({
-    debug: process.env.debug,
+    debug: debug,
     'json_file_store': path.join(__dirname, 'data')
 });
 bluebird.promisifyAll(controller.storage.users);
@@ -40,7 +43,7 @@ const checkUserTrello = () => {
             }
         });
 
-        if(process.env.debug) {
+        if(debug) {
             teammates = [
                 {
                     id: 'U02ESHJRL',
