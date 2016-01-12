@@ -3,7 +3,7 @@
 const bluebird = require('bluebird');
 const Botkit = require('botkit');
 const moment = require('moment');
-const path = require('path');
+const botkitRedisStorage = require('botkit-storage-redis');
 const schedule = require('node-schedule');
 const Trello = require('node-trello');
 
@@ -16,9 +16,13 @@ if(!process.env.SLACK_BOT_TOKEN)
 const t = new Trello(process.env.TRELLO_KEY, process.env.TRELLO_SECRET);
 bluebird.promisifyAll(t);
 
+const redisStorage = botkitRedisStorage({
+    url: process.env.REDIS_URL
+});
+
 const controller = Botkit.slackbot({
     debug: debug,
-    'json_file_store': path.join(__dirname, 'data')
+    storage: redisStorage
 });
 bluebird.promisifyAll(controller.storage.users);
 
