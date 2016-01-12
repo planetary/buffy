@@ -8,12 +8,12 @@ const schedule = require('node-schedule');
 const Trello = require('node-trello');
 
 require('dotenv').load();
-const debug = process.env.debug === 'true';
+const debug = process.env.DEBUG === 'true';
 
-if(!process.env.token)
+if(!process.env.SLACK_BOT_TOKEN)
     throw new Error('Specify token in environment');
 
-const t = new Trello(process.env.trello_key, process.env.trello_secret);
+const t = new Trello(process.env.TRELLO_KEY, process.env.TRELLO_SECRET);
 bluebird.promisifyAll(t);
 
 const controller = Botkit.slackbot({
@@ -23,7 +23,7 @@ const controller = Botkit.slackbot({
 bluebird.promisifyAll(controller.storage.users);
 
 const bot = controller.spawn({
-    token: process.env.token
+    token: process.env.SLACK_BOT_TOKEN
 }).startRTM();
 
 const checkUserTrello = () => {
