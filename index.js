@@ -49,11 +49,6 @@ const checkUserTrello = () => {
                     id: 'U02ESHJRL',
                     name: 'josh'
                 }
-                // },
-                // {
-                //     id: 'U02EQ5RCD',
-                //     name: 'matt'
-                // }
             ];
         }
 
@@ -227,4 +222,5 @@ schedule.scheduleJob('0 30 9 * * 1', checkUserTrello);
 schedule.scheduleJob('0 30 10 * * 1', lateTasks);
 
 controller.hears('late', ['direct_message'], (bot, message) => lateTasks(message.user));
+controller.hears('^announce$', ['direct_message'], () => lateTasks());
 controller.hears('^check users$', ['direct_message'], checkUserTrello);
