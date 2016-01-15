@@ -48,12 +48,8 @@ const checkUserTrello = () => {
         });
 
         if(debug) {
-            teammates = [
-                {
-                    id: 'U02ESHJRL',
-                    name: 'josh'
-                }
-            ];
+            const usernames = process.env.DEBUG_USER.split(',');
+            teammates = teammates.filter((user) => usernames.indexOf(user.name) > -1);
         }
 
         teammates.forEach((user) => {
@@ -83,8 +79,8 @@ const checkUserTrello = () => {
                             [
                                 {
                                     pattern: new RegExp(
-                                        '(^u[mh]+)|(hold on)|((one|a) sec(ond)?)|' +
-                                        '(\\bwait\\b)|(^ok)|(got it)|(^no|nope$)'
+                                        '^((u[mh]+)|(hold on)|((one|a) sec(ond)?)|' +
+                                        '(\\bwait\\b)|(^ok)|(got it)|(no|nope))$'
                                     ),
                                     callback: (response, convo) => {
                                         convo.silentRepeat();
@@ -94,7 +90,6 @@ const checkUserTrello = () => {
                                     default: true,
                                     callback: (response, convo) => {
                                         convo.say(`Hold on, let me check that...`);
-                                        convo.next();
 
                                         t.getAsync('/1/members/' + response.text + '/cards')
                                         .then(() => {
@@ -185,22 +180,6 @@ const lateTasks = (userId) => {
             }
         });
 
-        if(!lateCards)
-            return;
-
-        const tasks = [];
-        Object.keys(out).forEach((board) => {
-            if(!out[board].length)
-                return;
-
-            tasks.push({
-                fallback: `${_boards[board].name}: ${out[board].length} tasks`,
-                title: _boards[board].name,
-                text: out[board].join('\n'),
-                color: '#838C91'
-            });
-        });
-
         bot.startPrivateConversation({
             user: data.user.id
         }, (err, convo) => {
@@ -211,12 +190,29 @@ const lateTasks = (userId) => {
                 return;
             }
 
-            convo.say({
-                text:
-                    `Hey! A few of your tasks are recently past due. Could you go through ` +
-                    `and add comments or update the expected completion dates?\n\n`,
-                attachments: tasks
-            });
+            if(lateCards) {
+                const tasks = [];
+                Object.keys(out).forEach((board) => {
+                    if(!out[board].length)
+                        return;
+
+                    tasks.push({
+                        fallback: `${_boards[board].name}: ${out[board].length} tasks`,
+                        title: _boards[board].name,
+                        text: out[board].join('\n'),
+                        color: '#838C91'
+                    });
+                });
+
+                convo.say({
+                    text:
+                        `Hey! A few of your tasks are recently past due. Could you go through ` +
+                        `and add comments or update the expected completion dates?\n\n`,
+                    attachments: tasks
+                });
+            } else if(userId) {
+                convo.say(`You don't have any late tasks right now!`);
+            }
         });
     })
     .catch((err) => console.trace(err));
