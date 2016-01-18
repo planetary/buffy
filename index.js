@@ -1,12 +1,13 @@
 'use strict';
 
+require('dotenv').load();
+require('newrelic');
+
 const bluebird = require('bluebird');
 const Botkit = require('botkit');
 const botkitRedisStorage = require('botkit-storage-redis');
 const fs = require('fs');
 const path = require('path');
-
-require('dotenv').load();
 
 if(!process.env.SLACK_BOT_TOKEN)
     throw new Error('Specify token in environment');
