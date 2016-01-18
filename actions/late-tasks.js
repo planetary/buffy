@@ -57,6 +57,9 @@ const lateTasks = (bot, controller, userId) => {
         let lateCards = 0;
         Object.keys(_boards).forEach((board) => out[board] = []);
         data.cards.forEach((card) => {
+            if(!_boards[card.idBoard])
+                return;
+
             const list = _boards[card.idBoard].lists[card.idList].toLowerCase();
             const due = moment(card.badges.due);
 
