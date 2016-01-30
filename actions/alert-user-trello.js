@@ -19,7 +19,7 @@ module.exports = (bot, controller) => {
         const action = req.body.action;
         const model = req.body.model;
 
-        if(action.type !== 'commentCard')
+        if(action.type !== 'mentionedOnCard')
             return;
 
         controller.storage.users.all((err, users) => {

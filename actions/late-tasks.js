@@ -1,5 +1,6 @@
 'use strict';
 
+const async = require('async');
 const bluebird = require('bluebird');
 const moment = require('moment');
 const schedule = require('node-schedule');
@@ -8,8 +9,49 @@ const TrelloAPI = require('node-trello');
 const trello = new TrelloAPI(process.env.TRELLO_KEY, process.env.TRELLO_SECRET);
 bluebird.promisifyAll(trello);
 
+const debug = process.env.DEBUG === 'true';
+
 const lateTasks = (bot, controller, userId) => {
     let _boards = {};
+
+    const q = async.queue((task, done) => {
+        bot.startPrivateConversation({
+            user: task.user.id
+        }, (err, convo) => {
+            if(err) {
+                console.error(
+                    `Could not start conversation with user ${task.user.id} because:\n${err}`
+                );
+                return;
+            }
+
+            if(task.lateCards) {
+                const tasks = [];
+                Object.keys(task.out).forEach((board) => {
+                    if(!task.out[board].length)
+                        return;
+
+                    tasks.push({
+                        fallback: `${_boards[board].name}: ${task.out[board].length} tasks`,
+                        title: _boards[board].name,
+                        text: task.out[board].join('\n'),
+                        color: '#838C91'
+                    });
+                });
+
+                convo.say({
+                    text:
+                        `Hey! A few of your tasks are recently past due. Could you go through ` +
+                        `and add comments or update the expected completion dates?\n\n`,
+                    attachments: tasks
+                });
+            } else if(userId) {
+                convo.say(`You don't have any late tasks right now!`);
+            }
+        });
+
+        setTimeout(done, 1100); // wait 1.1s before allowing the next task to run (rate limit = 1s)
+    });
 
     trello.getAsync('/1/members/me/boards')
     .then((boards) => {
@@ -40,6 +82,11 @@ const lateTasks = (bot, controller, userId) => {
         });
     })
     .then((users) => {
+        if(debug) {
+            const ids = process.env.DEBUG_USER_ID.split(',');
+            users = users.filter((user) => ids.indexOf(user.id) > -1);
+        }
+
         return users.map((user) => {
             if(!user.trello)
                 return;
@@ -53,9 +100,9 @@ const lateTasks = (bot, controller, userId) => {
         });
     })
     .each((data) => {
-        let out = {};
-        let lateCards = 0;
-        Object.keys(_boards).forEach((board) => out[board] = []);
+        data.out = {};
+        data.lateCards = 0;
+        Object.keys(_boards).forEach((board) => data.out[board] = []);
         data.cards.forEach((card) => {
             if(!_boards[card.idBoard])
                 return;
@@ -63,54 +110,22 @@ const lateTasks = (bot, controller, userId) => {
             const list = _boards[card.idBoard].lists[card.idList].toLowerCase();
             const due = moment(card.badges.due);
 
-            if(due.isBefore(new Date()) && !list.match(/completed|done|shipped/)) {
-                lateCards++;
-                out[card.idBoard].push(
+            if(due.isBefore(new Date()) &&
+                !list.match(/completed|done|shipped|(ready for qa)|(ready to ship)/)) {
+                data.lateCards++;
+                data.out[card.idBoard].push(
                     `${due.format('MMM D, YYYY @ h:mma')}: <${card.shortUrl}|${card.name}>`
                 );
             }
         });
 
-        bot.startPrivateConversation({
-            user: data.user.id
-        }, (err, convo) => {
-            if(err) {
-                console.error(
-                    `Could not start conversation with user ${data.user.id} because:\n${err}`
-                );
-                return;
-            }
-
-            if(lateCards) {
-                const tasks = [];
-                Object.keys(out).forEach((board) => {
-                    if(!out[board].length)
-                        return;
-
-                    tasks.push({
-                        fallback: `${_boards[board].name}: ${out[board].length} tasks`,
-                        title: _boards[board].name,
-                        text: out[board].join('\n'),
-                        color: '#838C91'
-                    });
-                });
-
-                convo.say({
-                    text:
-                        `Hey! A few of your tasks are recently past due. Could you go through ` +
-                        `and add comments or update the expected completion dates?\n\n`,
-                    attachments: tasks
-                });
-            } else if(userId) {
-                convo.say(`You don't have any late tasks right now!`);
-            }
-        });
+        q.push(data);
     })
     .catch((err) => console.trace(err));
 };
 
 module.exports = (bot, controller) => {
-    schedule.scheduleJob('0 30 10 * * 1', () => lateTasks(bot, controller));
+    schedule.scheduleJob('0 30 10 * * *', () => lateTasks(bot, controller));
 
     controller.hears(
         'late',
