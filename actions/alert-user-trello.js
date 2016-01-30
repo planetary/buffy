@@ -27,7 +27,7 @@ module.exports = (bot, controller) => {
                 return console.error(`Couldn't retrieve users because:\n`, err);
 
             const user = users.filter((u) => u.trello === model.username);
-            if(!user.length)
+            if(!user.length || model.username === action.memberCreator.username)
                 return;
 
             bot.startPrivateConversation({
